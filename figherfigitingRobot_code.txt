@@ -1,0 +1,232 @@
+#include <Arduino.h>
+
+// Motor Driver Right
+#define in1 12 // MotorRF1  L298 Pin yellow
+#define in2 14 // MotorRF2  L298 Pin orange
+#define in3 26 // MotorRB1  L298 Pin brown
+#define in4 27 // MotorRB2  L298 Pin red
+
+// Motor Driver Left
+#define in5 4  // MotorLF1  L2982 Pin grey 
+#define in6 0  // MotorLF2  L2982 Pin purple
+#define in7 15 // MotorLB1  L2982 Pin green
+#define in8 2  // MotorLB2  L2982 Pin blue 
+
+const int sensor1 = 21;  //right flame sensor
+const int sensor2 = 19;  //Middle flame sensor
+const int sensor3 = 18;  //Left flame sensor
+
+#define relayPin  23
+#define servo  16
+#define servo1 5
+
+#define trigPin 34
+#define echoPin 35
+
+int Speed = 60; // Write The Duty Cycle 0 to 255 Enable for Motor Speed 
+
+
+void setup() {
+  Serial.begin(9600); // start serial communication at 9600bps
+  pinMode(sensor1, INPUT); // declare fire sensor pin as input
+  pinMode(sensor2, INPUT); // declare fire sensor pin as input
+  pinMode(sensor3, INPUT); // declare fire sensor pin as input
+
+  pinMode(in1, OUTPUT); // declare as output for L298 Pin in1 
+  pinMode(in2, OUTPUT); // declare as output for L298 Pin in2 
+  pinMode(in3, OUTPUT); // declare as output for L298 Pin in3   
+  pinMode(in4, OUTPUT); // declare as output for L298 Pin in4 
+
+  pinMode(in5, OUTPUT); // declare as output for L298 Pin in5 
+  pinMode(in6, OUTPUT); // declare as output for L298 Pin in6 
+  pinMode(in7, OUTPUT); // declare as output for L298 Pin in7   
+  pinMode(in8, OUTPUT); // declare as output for L298 Pin in8 
+
+  pinMode(servo, OUTPUT);  // attach servo pin
+  pinMode(servo1, OUTPUT); // attach servo1 pin
+  pinMode(relayPin, OUTPUT);  // declare as output for relay pin
+  
+  // Initialize relay to off state
+  digitalWrite(relayPin, LOW);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  for (int angle = 90; angle <= 140; angle += 5) {
+    servoPulse(servo, angle);
+  }
+  for (int angle = 140; angle >= 40; angle -= 5) {
+    servoPulse(servo, angle);
+  }
+  for (int angle = 40; angle <= 95; angle += 5) {
+    servoPulse(servo, angle);
+  }
+  delay(500);
+}
+
+void loop() {
+
+  // Read flame sensor input
+  int s1 = analogRead(sensor1);
+  int s2 = analogRead(sensor2);
+  int s3 = analogRead(sensor3);
+ 
+
+  long duration, distance;
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  distance = duration * 0.034 / 2;
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  if ((distance <= 50) && (s1 < 250 || s2 < 250 || s3 < 250)) {
+    digitalWrite(servo1, HIGH); // Activate servo1 if distance is within 50cm range and any flame sensor detects a flame
+  } else {
+    digitalWrite(servo1, LOW); // Deactivate servo1 if distance is greater than 50cm or no flame detected
+  }
+
+  Serial.print("Sensors: ");
+  Serial.print(s1);
+  Serial.print("\t");
+  Serial.print(s2);
+  Serial.print("\t");
+  Serial.println(s3);
+  delay(50);
+
+  if (s1<250) {
+    stopMotors();
+    digitalWrite(relayPin, HIGH);
+    for (int angle = 90; angle >= 40; angle -= 3) {
+      servoPulse(servo, angle);
+    }
+    for (int angle = 40; angle <= 90; angle += 3) {
+      servoPulse(servo, angle);
+    }
+    delay(100);
+    digitalWrite(relayPin, LOW);
+  } else if (s2<350) {
+    stopMotors();
+    digitalWrite(relayPin, HIGH);
+    for (int angle = 90; angle <= 140; angle += 3) {
+      servoPulse(servo, angle);
+      delay(50);
+    }
+    for (int angle = 140; angle >= 40; angle -= 3) {
+      servoPulse(servo, angle);
+      delay(50);
+    }
+    for (int angle = 40; angle <= 90; angle += 3) {
+      servoPulse(servo, angle);
+      delay(50);
+    }
+    delay(100);
+    digitalWrite(relayPin, LOW);
+  } else if (s3<250) {
+    stopMotors();
+    digitalWrite(relayPin, HIGH);
+    for (int angle = 90; angle <= 140; angle += 3) {
+      servoPulse(servo, angle);
+      delay(50);
+    }
+    for (int angle = 140; angle >= 90; angle -= 3) {
+      servoPulse(servo, angle);
+      delay(50);
+    }
+    delay(100);
+    digitalWrite(relayPin, LOW);
+  } else if (s1>=251 && s1<=700) {
+    digitalWrite(relayPin, LOW);
+    backword();
+    delay(100); 
+    turnRight();
+    delay(200); 
+  } else if(s2>=251 && s2<=800){
+    digitalWrite(relayPin, LOW);
+    forword(); 
+  } else if(s3>=251 && s3<=700){
+    digitalWrite(relayPin, LOW);
+    backword();
+    delay(100); 
+    turnLeft();
+    delay(200); 
+  }else {
+    digitalWrite(relayPin, LOW);
+    stopMotors();
+  }
+  delay(10);
+}
+
+void servoPulse(int pin, int angle) {
+    int pwm = (angle * 11) + 500;  // Convert angle to microseconds
+    digitalWrite(pin, HIGH);       // Set the servo pin to HIGH
+    delayMicroseconds(pwm);        // Wait for the specified pulse width
+    digitalWrite(pin, LOW);        // Set the servo pin to LOW
+    delay(50);                     // Wait for the refresh cycle of the servo
+}
+
+void forword() { //forword
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+  digitalWrite(in5, HIGH);
+  digitalWrite(in6, LOW);
+  digitalWrite(in7, HIGH);
+  digitalWrite(in8, LOW);
+  delay(300);
+}
+
+void backword() { //backword
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+  digitalWrite(in5, LOW);
+  digitalWrite(in6, HIGH);
+  digitalWrite(in7, LOW);
+  digitalWrite(in8, HIGH);
+  delay(300);
+}
+
+void turnRight() { //turnRight
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+  digitalWrite(in5, LOW);
+  digitalWrite(in6, HIGH);
+  digitalWrite(in7, LOW);
+  digitalWrite(in8, HIGH);
+  delay(2000); // Adjust delay as needed for the turn
+  stopMotors();
+}
+
+void turnLeft() { //turnLeft
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+  digitalWrite(in5, HIGH);
+  digitalWrite(in6, LOW);
+  digitalWrite(in7, HIGH);
+  digitalWrite(in8, LOW);
+  delay(2000); // Adjust delay as needed for the turn
+  stopMotors();
+}
+
+void stopMotors() { //stop
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, LOW);
+  digitalWrite(in5, LOW);
+  digitalWrite(in6, LOW);
+  digitalWrite(in7, LOW);
+  digitalWrite(in8, LOW);
+  delay(300);
+}
